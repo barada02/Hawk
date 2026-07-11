@@ -6,8 +6,10 @@ instance everywhere else — never read os.environ directly.
 """
 
 from functools import lru_cache
+from typing import Annotated
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -20,8 +22,23 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
-    # --- CORS (the Vite frontend runs on 5173 by default) ---
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # --- CORS ---
+    # Comma-separated list of allowed origins. Set CORS_ORIGINS in the
+    # environment on the deployed service, e.g.
+    #   CORS_ORIGINS=https://hawkeye-web-xxxx.run.app,https://app.example.com
+    # Defaults to the local Vite dev server.
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def _split_cors_origins(cls, value: object) -> object:
+        # Accept a plain comma-separated string from the env var.
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
     # --- Gemini ---
     GEMINI_API_KEY: str = ""
