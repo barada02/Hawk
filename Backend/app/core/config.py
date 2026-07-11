@@ -55,7 +55,8 @@ class Settings(BaseSettings):
     VIDEO_IMAGE_RESOLUTION: str = "high"
 
     # --- Media storage ---
-    # Local for now; swap to a GCS-backed Storage later (bucket created out-of-band).
+    STORAGE_BACKEND: str = "local"
+    GCS_BUCKET_NAME: str = "dmbhawkeye"
     MEDIA_DIR: str = "media"
     MEDIA_URL_PREFIX: str = "/media"
 

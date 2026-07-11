@@ -47,8 +47,42 @@ class LocalStorage(Storage):
         return path.read_bytes()
 
 
+class GCSStorage(Storage):
+    """Writes to a Google Cloud Storage bucket."""
+
+    def __init__(self, bucket_name: str) -> None:
+        from google.cloud import storage as gcs
+        self.client = gcs.Client()
+        self.bucket_name = bucket_name
+        self.bucket = self.client.bucket(bucket_name)
+
+    def save(self, data: bytes, ext: str) -> str:
+        name = f"{uuid.uuid4().hex}.{ext.lstrip('.')}"
+        blob = self.bucket.blob(name)
+
+        ext = ext.lstrip(".").lower()
+        content_type = "application/octet-stream"
+        if ext == "png":
+            content_type = "image/png"
+        elif ext in ("jpg", "jpeg"):
+            content_type = "image/jpeg"
+        elif ext == "webp":
+            content_type = "image/webp"
+        elif ext == "mp4":
+            content_type = "video/mp4"
+
+        blob.upload_from_string(data, content_type=content_type)
+        return f"https://storage.googleapis.com/{self.bucket_name}/{name}"
+
+    def read(self, url: str) -> bytes:
+        name = url.rsplit("/", 1)[-1]
+        blob = self.bucket.blob(name)
+        return blob.download_as_bytes()
+
+
 def get_storage() -> Storage:
-    # Later: if settings.STORAGE_BACKEND == "gcs": return GCSStorage(...)
+    if settings.STORAGE_BACKEND == "gcs":
+        return GCSStorage(settings.GCS_BUCKET_NAME)
     return LocalStorage(settings.MEDIA_DIR, settings.MEDIA_URL_PREFIX)
 
 
