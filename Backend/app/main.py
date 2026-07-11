@@ -4,10 +4,13 @@ Keep this file thin: it wires together config, middleware, and routers.
 Feature logic lives under app/api/routes/ and app/services/ as we grow.
 """
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import health
+from app.api.routes import generate, health
 from app.core.config import settings
 
 
@@ -27,8 +30,18 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Serve locally-stored media (dev only; GCS will replace this).
+    media_dir = Path(settings.MEDIA_DIR)
+    media_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        settings.MEDIA_URL_PREFIX,
+        StaticFiles(directory=media_dir),
+        name="media",
+    )
+
     # Routers. Add new feature routers here as the app grows.
     app.include_router(health.router, prefix="/api")
+    app.include_router(generate.router, prefix="/api")
 
     @app.get("/")
     def root() -> dict:
