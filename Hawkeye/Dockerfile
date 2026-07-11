@@ -33,6 +33,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 # -s: single-page-app mode (unknown routes -> index.html)
-# -l: listen on the Cloud Run-provided $PORT
-CMD ["sh", "-c", "find dist -type f -name '*.js' -exec sed -i \"s|__VITE_BACKEND_URI_PLACEHOLDER__|${VITE_BACKEND_URI:-http://127.0.0.1:8000}|g\" {} + && serve -s dist -l ${PORT}"]
+CMD ["sh", "-c", "serve -s dist -l ${PORT}"]
 
