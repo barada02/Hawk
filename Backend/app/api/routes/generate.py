@@ -1,12 +1,66 @@
 """Generation endpoints — the MVP surface: prompt -> image, prompt -> clip."""
 
-from fastapi import APIRouter, HTTPException
+import json
+from typing import Callable, Coroutine, Any
+from urllib.parse import parse_qs
+
+from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.routing import APIRoute
 from pydantic import BaseModel
 
 from app.services import gemini_service
 from app.services.storage import storage
 
-router = APIRouter(prefix="/generate", tags=["generate"])
+
+class RobustRoute(APIRoute):
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            content_type = request.headers.get("content-type", "")
+            body = await request.body()
+            parsed_data = None
+
+            # 1. Try JSON parsing
+            try:
+                if body:
+                    parsed_data = json.loads(body)
+            except Exception:
+                pass
+
+            # 2. Try URL-encoded form parsing
+            if parsed_data is None and body:
+                try:
+                    decoded_body = body.decode("utf-8", errors="ignore")
+                    if "=" in decoded_body and not decoded_body.strip().startswith("{"):
+                        qs = parse_qs(decoded_body)
+                        parsed_data = {k: v[0] for k, v in qs.items()}
+                except Exception:
+                    pass
+
+            # 3. Try query parameters as fallback
+            if (parsed_data is None or not parsed_data) and request.query_params:
+                parsed_data = dict(request.query_params)
+
+            # If we successfully parsed dictionary data, rewrite the request to be JSON!
+            if parsed_data is not None and isinstance(parsed_data, dict):
+                headers = dict(request.headers)
+                headers["content-type"] = "application/json"
+                request._headers = headers
+                
+                new_body = json.dumps(parsed_data).encode("utf-8")
+                
+                async def new_receive():
+                    return {"type": "http.request", "body": new_body, "more_body": False}
+                request._receive = new_receive
+                request._body = new_body
+
+            return await original_route_handler(request)
+
+        return custom_route_handler
+
+
+router = APIRouter(prefix="/generate", tags=["generate"], route_class=RobustRoute)
 
 
 class ImageRequest(BaseModel):
