@@ -1,10 +1,4 @@
-// Fallback to local dev if placeholder is not replaced at container startup
-const PLACEHOLDER = '__VITE_BACKEND_URI_PLACEHOLDER__'
-export const BACKEND_BASE = (
-  PLACEHOLDER.startsWith('__VITE')
-    ? (import.meta.env.VITE_BACKEND_URI || 'http://127.0.0.1:8000')
-    : PLACEHOLDER
-).replace(/\/$/, '')
+export const BACKEND_BASE = (import.meta.env.VITE_BACKEND_URI || '').replace(/\/$/, '')
 
 // Media URLs from the API are relative (e.g. /media/xyz.png) — prefix them.
 export function mediaUrl(path: string): string {
