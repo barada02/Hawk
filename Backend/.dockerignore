@@ -6,6 +6,7 @@ __pycache__/
 .env
 .git/
 .gitignore
+media/
 *.mp4
 *.png
 *.jpg

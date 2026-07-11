@@ -23,8 +23,16 @@ class Settings(BaseSettings):
     # --- CORS (the Vite frontend runs on 5173 by default) ---
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-    # --- External services ---
+    # --- Gemini ---
     GEMINI_API_KEY: str = ""
+    IMAGE_MODEL: str = "gemini-3.1-flash-lite-image"
+    VIDEO_MODEL: str = "gemini-omni-flash-preview"
+    DEFAULT_ASPECT_RATIO: str = "16:9"
+
+    # --- Media storage ---
+    # Local for now; swap to a GCS-backed Storage later (bucket created out-of-band).
+    MEDIA_DIR: str = "media"
+    MEDIA_URL_PREFIX: str = "/media"
 
     model_config = SettingsConfigDict(
         env_file=".env",
