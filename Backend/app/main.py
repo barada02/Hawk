@@ -31,13 +31,14 @@ def create_app() -> FastAPI:
     )
 
     # Serve locally-stored media (dev only; GCS will replace this).
-    media_dir = Path(settings.MEDIA_DIR)
-    media_dir.mkdir(parents=True, exist_ok=True)
-    app.mount(
-        settings.MEDIA_URL_PREFIX,
-        StaticFiles(directory=media_dir),
-        name="media",
-    )
+    if settings.STORAGE_BACKEND == "local":
+        media_dir = Path(settings.MEDIA_DIR)
+        media_dir.mkdir(parents=True, exist_ok=True)
+        app.mount(
+            settings.MEDIA_URL_PREFIX,
+            StaticFiles(directory=media_dir),
+            name="media",
+        )
 
     # Routers. Add new feature routers here as the app grows.
     app.include_router(health.router, prefix="/api")
