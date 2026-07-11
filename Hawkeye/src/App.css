@@ -53,10 +53,49 @@ body {
   border: 1px solid #23262f;
 }
 
-.grid {
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.badge {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 20px;
+  place-items: center;
+  font-weight: 700;
+  color: #0d0f14;
+  background: linear-gradient(90deg, #6ee7ff, #a78bfa);
+}
+
+.connector {
+  text-align: center;
+  color: #6ee7ff;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.panel.disabled {
+  opacity: 0.6;
+}
+
+.ok {
+  display: inline-block;
+  margin-top: 8px;
+  color: #6ee7ff;
+  font-size: 13px;
 }
 
 .panel {

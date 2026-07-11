@@ -40,6 +40,9 @@ export function generateImage(prompt: string, aspectRatio: string) {
   })
 }
 
-export function generateVideo(prompt: string) {
-  return postJson<VideoResult>('/api/generate/video', { prompt })
+export function generateVideo(prompt: string, imageUrl?: string) {
+  return postJson<VideoResult>('/api/generate/video', {
+    prompt,
+    image_url: imageUrl ?? null,
+  })
 }

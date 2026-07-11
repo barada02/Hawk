@@ -35,7 +35,8 @@ def test_health(client: httpx.Client, base_url: str) -> None:
     print("    ->", resp.json())
 
 
-def test_image(client: httpx.Client, base_url: str, prompt: str) -> None:
+def test_image(client: httpx.Client, base_url: str, prompt: str) -> str | None:
+    """Returns the generated image_url (relative) for use as a keyframe."""
     print("\n[2] POST /api/generate/image")
     print(f"    prompt: {prompt!r}")
     resp = client.post(
@@ -44,18 +45,22 @@ def test_image(client: httpx.Client, base_url: str, prompt: str) -> None:
     )
     if resp.status_code != 200:
         print(f"    FAILED [{resp.status_code}]: {resp.text}")
-        return
+        return None
     data = resp.json()
     print("    ->", data)
     _download(client, base_url, data["image_url"], "image")
+    return data["image_url"]
 
 
-def test_video(client: httpx.Client, base_url: str, prompt: str) -> None:
+def test_video(
+    client: httpx.Client, base_url: str, prompt: str, image_url: str | None
+) -> None:
     print("\n[3] POST /api/generate/video  (slow — minutes; please wait)")
     print(f"    prompt: {prompt!r}")
+    print(f"    keyframe: {image_url or '(none — text only)'}")
     resp = client.post(
         base_url + "/api/generate/video",
-        json={"prompt": prompt},
+        json={"prompt": prompt, "image_url": image_url},
     )
     if resp.status_code != 200:
         print(f"    FAILED [{resp.status_code}]: {resp.text}")
@@ -96,10 +101,11 @@ def main() -> int:
             print(f"\nCould not connect to {base_url}. Is the server running?")
             return 1
 
-        test_image(client, base_url, args.image_prompt)
+        image_url = test_image(client, base_url, args.image_prompt)
 
         if args.video:
-            test_video(client, base_url, args.video_prompt)
+            # Linked flow: animate the keyframe we just generated.
+            test_video(client, base_url, args.video_prompt, image_url)
         else:
             print("\n[3] Skipping video test (pass --video to run it).")
 

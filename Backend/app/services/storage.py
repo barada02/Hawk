@@ -19,6 +19,11 @@ class Storage(ABC):
         """Persist `data` and return a URL that serves it."""
         raise NotImplementedError
 
+    @abstractmethod
+    def read(self, url: str) -> bytes:
+        """Load back the bytes for a URL previously returned by `save`."""
+        raise NotImplementedError
+
 
 class LocalStorage(Storage):
     """Writes to a local directory served by FastAPI at `url_prefix`."""
@@ -32,6 +37,14 @@ class LocalStorage(Storage):
         name = f"{uuid.uuid4().hex}.{ext.lstrip('.')}"
         (self.base_dir / name).write_bytes(data)
         return f"{self.url_prefix}/{name}"
+
+    def read(self, url: str) -> bytes:
+        # Map the served URL back to its file; reject path traversal.
+        name = Path(url).name
+        path = self.base_dir / name
+        if not path.is_file():
+            raise FileNotFoundError(url)
+        return path.read_bytes()
 
 
 def get_storage() -> Storage:

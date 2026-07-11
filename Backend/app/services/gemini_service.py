@@ -46,15 +46,33 @@ def generate_image(prompt: str, aspect_ratio: str | None = None) -> bytes:
 
 def generate_video(
     prompt: str,
+    image_bytes: bytes | None = None,
+    image_mime_type: str = "image/png",
     previous_interaction_id: str | None = None,
 ) -> tuple[bytes, str]:
     """Omni Flash → (video bytes, interaction_id).
 
-    `previous_interaction_id` chains this clip onto a prior one for continuity
-    (used in later stages). Image-conditioned input comes next once we confirm
-    the exact `input=` format for passing an image into interactions.create.
+    - `image_bytes`: optional reference image; sent alongside the text so the
+      clip animates from that keyframe (image+text → video).
+    - `previous_interaction_id`: chains this clip onto a prior one for
+      continuity (the interaction-id chain used to build long video).
+
+    Input format follows the Interactions API: a plain string for text-only,
+    or a list of typed content blocks when an image is included.
     """
-    kwargs: dict = {"model": settings.VIDEO_MODEL, "input": prompt}
+    if image_bytes:
+        interaction_input: object = [
+            {"type": "text", "text": prompt},
+            {
+                "type": "image",
+                "data": base64.b64encode(image_bytes).decode(),
+                "mime_type": image_mime_type,
+            },
+        ]
+    else:
+        interaction_input = prompt
+
+    kwargs: dict = {"model": settings.VIDEO_MODEL, "input": interaction_input}
     if previous_interaction_id:
         kwargs["previous_interaction_id"] = previous_interaction_id
 

@@ -10,138 +10,165 @@ import './App.css'
 
 const ASPECT_RATIOS = ['16:9', '1:1', '9:16', '4:3', '3:4']
 
-function ImagePanel() {
-  const [prompt, setPrompt] = useState(
-    'A high-fidelity minimalist digital artwork of a banana wearing sunglasses on a neon background',
+function App() {
+  // Shared keyframe: Step 1 produces it, Step 2 animates it.
+  const [keyframeUrl, setKeyframeUrl] = useState<string | null>(null)
+
+  // --- Step 1: image ---
+  const [imgPrompt, setImgPrompt] = useState(
+    'A lone astronaut standing on a red desert planet at sunset, cinematic, wide shot',
   )
   const [aspect, setAspect] = useState('16:9')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imgLoading, setImgLoading] = useState(false)
+  const [imgError, setImgError] = useState<string | null>(null)
 
-  async function run() {
-    setLoading(true)
-    setError(null)
-    setImageUrl(null)
+  // --- Step 2: video ---
+  const [vidPrompt, setVidPrompt] = useState(
+    'The astronaut slowly turns to face the camera as dust drifts past, gentle camera push-in',
+  )
+  const [vidLoading, setVidLoading] = useState(false)
+  const [vidError, setVidError] = useState<string | null>(null)
+  const [video, setVideo] = useState<VideoResult | null>(null)
+
+  async function runImage() {
+    setImgLoading(true)
+    setImgError(null)
+    setKeyframeUrl(null)
+    setVideo(null)
     try {
-      const res = await generateImage(prompt, aspect)
-      setImageUrl(mediaUrl(res.image_url))
+      const res = await generateImage(imgPrompt, aspect)
+      setKeyframeUrl(mediaUrl(res.image_url))
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setImgError(e instanceof Error ? e.message : String(e))
     } finally {
-      setLoading(false)
+      setImgLoading(false)
     }
   }
 
-  return (
-    <section className="panel">
-      <h2>🖼️ Image generation</h2>
-      <p className="sub">Nano Banana 2 Lite · fast</p>
-
-      <label>Prompt</label>
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        rows={4}
-      />
-
-      <label>Aspect ratio</label>
-      <select value={aspect} onChange={(e) => setAspect(e.target.value)}>
-        {ASPECT_RATIOS.map((r) => (
-          <option key={r} value={r}>
-            {r}
-          </option>
-        ))}
-      </select>
-
-      <button onClick={run} disabled={loading || !prompt.trim()}>
-        {loading ? 'Generating…' : 'Generate image'}
-      </button>
-
-      {error && <p className="error">{error}</p>}
-      {imageUrl && (
-        <div className="result">
-          <img src={imageUrl} alt="generated" />
-          <a href={imageUrl} target="_blank" rel="noreferrer">
-            open full size ↗
-          </a>
-        </div>
-      )}
-    </section>
-  )
-}
-
-function VideoPanel() {
-  const [prompt, setPrompt] = useState(
-    'A simple red marble rolling down a wooden ramp, 3D render, minimalist background, 3 seconds',
-  )
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<VideoResult | null>(null)
-
-  async function run() {
-    setLoading(true)
-    setError(null)
-    setResult(null)
+  async function runVideo() {
+    if (!keyframeUrl) return
+    setVidLoading(true)
+    setVidError(null)
+    setVideo(null)
     try {
-      setResult(await generateVideo(prompt))
+      // Pass the keyframe path (strip the backend origin the API added).
+      const imagePath = keyframeUrl.replace(BACKEND_BASE, '')
+      setVideo(await generateVideo(vidPrompt, imagePath))
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setVidError(e instanceof Error ? e.message : String(e))
     } finally {
-      setLoading(false)
+      setVidLoading(false)
     }
   }
 
-  return (
-    <section className="panel">
-      <h2>🎬 Video generation</h2>
-      <p className="sub">Omni Flash · takes a few minutes</p>
-
-      <label>Prompt</label>
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        rows={4}
-      />
-
-      <button onClick={run} disabled={loading || !prompt.trim()}>
-        {loading ? 'Generating… (please wait)' : 'Generate video'}
-      </button>
-      {loading && (
-        <p className="hint">
-          The browser will wait until the clip is ready — this can take several
-          minutes. Don't close the tab.
-        </p>
-      )}
-
-      {error && <p className="error">{error}</p>}
-      {result && (
-        <div className="result">
-          <video src={mediaUrl(result.video_url)} controls />
-          <p className="meta">
-            interaction_id: <code>{result.interaction_id}</code>
-          </p>
-          <a href={mediaUrl(result.video_url)} target="_blank" rel="noreferrer">
-            open clip ↗
-          </a>
-        </div>
-      )}
-    </section>
-  )
-}
-
-function App() {
   return (
     <div className="app">
       <header className="topbar">
         <h1>Hawkeye</h1>
-        <span className="tagline">AI Video Studio — test console</span>
+        <span className="tagline">AI Video Studio — keyframe → clip</span>
         <span className="backend">API: {BACKEND_BASE}</span>
       </header>
 
-      <main className="grid">
-        <ImagePanel />
-        <VideoPanel />
+      <main className="flow">
+        {/* Step 1 */}
+        <section className="panel">
+          <div className="step">
+            <span className="badge">1</span>
+            <div>
+              <h2>Generate keyframe</h2>
+              <p className="sub">Nano Banana 2 Lite · the first frame of your shot</p>
+            </div>
+          </div>
+
+          <label>Image prompt</label>
+          <textarea
+            value={imgPrompt}
+            onChange={(e) => setImgPrompt(e.target.value)}
+            rows={3}
+          />
+
+          <label>Aspect ratio</label>
+          <select value={aspect} onChange={(e) => setAspect(e.target.value)}>
+            {ASPECT_RATIOS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+
+          <button onClick={runImage} disabled={imgLoading || !imgPrompt.trim()}>
+            {imgLoading ? 'Generating…' : 'Generate keyframe'}
+          </button>
+
+          {imgError && <p className="error">{imgError}</p>}
+          {keyframeUrl && (
+            <div className="result">
+              <img src={keyframeUrl} alt="keyframe" />
+              <span className="ok">✓ keyframe ready — animate it below</span>
+            </div>
+          )}
+        </section>
+
+        {/* connector */}
+        <div className="connector" aria-hidden="true">
+          ↓ image + text
+        </div>
+
+        {/* Step 2 */}
+        <section className={`panel ${keyframeUrl ? '' : 'disabled'}`}>
+          <div className="step">
+            <span className="badge">2</span>
+            <div>
+              <h2>Animate into a clip</h2>
+              <p className="sub">
+                Omni Flash · the keyframe + your motion prompt → video (takes a
+                few minutes)
+              </p>
+            </div>
+          </div>
+
+          {!keyframeUrl && (
+            <p className="hint">Generate a keyframe first to unlock this step.</p>
+          )}
+
+          <label>Motion prompt</label>
+          <textarea
+            value={vidPrompt}
+            onChange={(e) => setVidPrompt(e.target.value)}
+            rows={3}
+            disabled={!keyframeUrl}
+          />
+
+          <button
+            onClick={runVideo}
+            disabled={vidLoading || !keyframeUrl || !vidPrompt.trim()}
+          >
+            {vidLoading ? 'Generating clip… (please wait)' : 'Generate video from keyframe'}
+          </button>
+          {vidLoading && (
+            <p className="hint">
+              The browser will wait until the clip is ready — this can take
+              several minutes. Don't close the tab.
+            </p>
+          )}
+
+          {vidError && <p className="error">{vidError}</p>}
+          {video && (
+            <div className="result">
+              <video src={mediaUrl(video.video_url)} controls />
+              <p className="meta">
+                interaction_id: <code>{video.interaction_id}</code>
+              </p>
+              <a
+                href={mediaUrl(video.video_url)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                open clip ↗
+              </a>
+            </div>
+          )}
+        </section>
       </main>
     </div>
   )
