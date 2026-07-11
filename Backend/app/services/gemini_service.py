@@ -83,13 +83,13 @@ def generate_video(
     if image_bytes:
         task = "image_to_video"
         interaction_input: object = [
-            {"type": "text", "text": prompt},
             {
                 "type": "image",
                 "data": base64.b64encode(image_bytes).decode(),
                 "mime_type": image_mime_type,
                 "resolution": settings.VIDEO_IMAGE_RESOLUTION,
             },
+            {"type": "text", "text": prompt},
         ]
     else:
         task = "text_to_video"
