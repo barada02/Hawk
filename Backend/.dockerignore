@@ -1,0 +1,12 @@
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.env
+.git/
+.gitignore
+*.mp4
+*.png
+*.jpg
+generated_output_*
