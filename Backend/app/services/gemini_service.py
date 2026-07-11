@@ -6,7 +6,7 @@ image-conditioned video and the interaction-id chain.
 """
 
 import base64
-import io
+from functools import lru_cache
 
 from google import genai
 from google.genai import types
@@ -14,10 +14,12 @@ from google.genai import types
 from app.core.config import settings
 
 
+@lru_cache
 def _client() -> genai.Client:
-    # Explicit key from settings (loaded from .env); on Cloud Run the same
-    # env var is present. Created per call is cheap and avoids import-time
-    # failures when the key isn't set yet.
+    # Cached so the single Client (and its HTTP transport) lives for the
+    # process. Creating it per call and chaining lets it get GC'd mid-request,
+    # which closes the transport ("client has been closed"). Lazy so an unset
+    # key doesn't blow up at import time.
     if settings.GEMINI_API_KEY:
         return genai.Client(api_key=settings.GEMINI_API_KEY)
     return genai.Client()
@@ -36,10 +38,9 @@ def generate_image(prompt: str, aspect_ratio: str | None = None) -> bytes:
         ),
     )
     for part in response.parts or []:
-        if part.inline_data:
-            buf = io.BytesIO()
-            part.as_image().save(buf, format="PNG")
-            return buf.getvalue()
+        if part.inline_data and part.inline_data.data:
+            # Raw image bytes straight from the model (already PNG-encoded).
+            return part.inline_data.data
     raise RuntimeError("Image model returned no image data")
 
 

@@ -1,121 +1,149 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import {
+  BACKEND_BASE,
+  generateImage,
+  generateVideo,
+  mediaUrl,
+  type VideoResult,
+} from './api'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const ASPECT_RATIOS = ['16:9', '1:1', '9:16', '4:3', '3:4']
+
+function ImagePanel() {
+  const [prompt, setPrompt] = useState(
+    'A high-fidelity minimalist digital artwork of a banana wearing sunglasses on a neon background',
+  )
+  const [aspect, setAspect] = useState('16:9')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+
+  async function run() {
+    setLoading(true)
+    setError(null)
+    setImageUrl(null)
+    try {
+      const res = await generateImage(prompt, aspect)
+      setImageUrl(mediaUrl(res.image_url))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <section className="panel">
+      <h2>🖼️ Image generation</h2>
+      <p className="sub">Nano Banana 2 Lite · fast</p>
+
+      <label>Prompt</label>
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        rows={4}
+      />
+
+      <label>Aspect ratio</label>
+      <select value={aspect} onChange={(e) => setAspect(e.target.value)}>
+        {ASPECT_RATIOS.map((r) => (
+          <option key={r} value={r}>
+            {r}
+          </option>
+        ))}
+      </select>
+
+      <button onClick={run} disabled={loading || !prompt.trim()}>
+        {loading ? 'Generating…' : 'Generate image'}
+      </button>
+
+      {error && <p className="error">{error}</p>}
+      {imageUrl && (
+        <div className="result">
+          <img src={imageUrl} alt="generated" />
+          <a href={imageUrl} target="_blank" rel="noreferrer">
+            open full size ↗
+          </a>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+      )}
+    </section>
+  )
+}
+
+function VideoPanel() {
+  const [prompt, setPrompt] = useState(
+    'A simple red marble rolling down a wooden ramp, 3D render, minimalist background, 3 seconds',
+  )
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<VideoResult | null>(null)
+
+  async function run() {
+    setLoading(true)
+    setError(null)
+    setResult(null)
+    try {
+      setResult(await generateVideo(prompt))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <section className="panel">
+      <h2>🎬 Video generation</h2>
+      <p className="sub">Omni Flash · takes a few minutes</p>
+
+      <label>Prompt</label>
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        rows={4}
+      />
+
+      <button onClick={run} disabled={loading || !prompt.trim()}>
+        {loading ? 'Generating… (please wait)' : 'Generate video'}
+      </button>
+      {loading && (
+        <p className="hint">
+          The browser will wait until the clip is ready — this can take several
+          minutes. Don't close the tab.
+        </p>
+      )}
+
+      {error && <p className="error">{error}</p>}
+      {result && (
+        <div className="result">
+          <video src={mediaUrl(result.video_url)} controls />
+          <p className="meta">
+            interaction_id: <code>{result.interaction_id}</code>
           </p>
+          <a href={mediaUrl(result.video_url)} target="_blank" rel="noreferrer">
+            open clip ↗
+          </a>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      )}
+    </section>
+  )
+}
 
-      <div className="ticks"></div>
+function App() {
+  return (
+    <div className="app">
+      <header className="topbar">
+        <h1>Hawkeye</h1>
+        <span className="tagline">AI Video Studio — test console</span>
+        <span className="backend">API: {BACKEND_BASE}</span>
+      </header>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <main className="grid">
+        <ImagePanel />
+        <VideoPanel />
+      </main>
+    </div>
   )
 }
 
