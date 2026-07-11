@@ -3,5 +3,8 @@ dist/
 .git/
 .gitignore
 *.log
+# Keep local secrets out, but ALLOW .env.production into the build context
+# so Vite bakes the production backend URL into the bundle at build time.
 .env
-.env.*
+.env.local
+.env.*.local
