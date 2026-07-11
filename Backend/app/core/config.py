@@ -26,8 +26,16 @@ class Settings(BaseSettings):
     # --- Gemini ---
     GEMINI_API_KEY: str = ""
     IMAGE_MODEL: str = "gemini-3.1-flash-lite-image"
-    VIDEO_MODEL: str = "gemini-omni-flash-preview"
+    VIDEO_MODEL: str = "models/gemini-omni-flash-preview"
     DEFAULT_ASPECT_RATIO: str = "16:9"
+
+    # Video generation params (drive quality/consistency of Omni output).
+    VIDEO_DURATION: str = "10s"
+    VIDEO_THINKING_LEVEL: str = "high"
+    VIDEO_MAX_OUTPUT_TOKENS: int = 65536
+    # Resolution the reference image is fed at (low|medium|high|ultra_high).
+    # Higher = the clip stays truer to the keyframe.
+    VIDEO_IMAGE_RESOLUTION: str = "high"
 
     # --- Media storage ---
     # Local for now; swap to a GCS-backed Storage later (bucket created out-of-band).

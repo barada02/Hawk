@@ -26,6 +26,7 @@ function App() {
   const [vidPrompt, setVidPrompt] = useState(
     'The astronaut slowly turns to face the camera as dust drifts past, gentle camera push-in',
   )
+  const [duration, setDuration] = useState('10s')
   const [vidLoading, setVidLoading] = useState(false)
   const [vidError, setVidError] = useState<string | null>(null)
   const [video, setVideo] = useState<VideoResult | null>(null)
@@ -53,7 +54,7 @@ function App() {
     try {
       // Pass the keyframe path (strip the backend origin the API added).
       const imagePath = keyframeUrl.replace(BACKEND_BASE, '')
-      setVideo(await generateVideo(vidPrompt, imagePath))
+      setVideo(await generateVideo(vidPrompt, imagePath, duration))
     } catch (e) {
       setVidError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -138,6 +139,19 @@ function App() {
             rows={3}
             disabled={!keyframeUrl}
           />
+
+          <label>Duration</label>
+          <select
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            disabled={!keyframeUrl}
+          >
+            {['4s', '6s', '8s', '10s'].map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
 
           <button
             onClick={runVideo}

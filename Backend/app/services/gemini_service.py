@@ -44,11 +44,27 @@ def generate_image(prompt: str, aspect_ratio: str | None = None) -> bytes:
     raise RuntimeError("Image model returned no image data")
 
 
+def _extract_video_bytes(interaction) -> bytes | None:
+    """Pull the video bytes out of an interaction's model_output steps."""
+    for step in getattr(interaction, "steps", None) or []:
+        if step.type == "model_output" and step.content:
+            for part in step.content:
+                if part.type == "video":
+                    data = getattr(part, "data", None)
+                    if data:
+                        try:
+                            return base64.b64decode(data)
+                        except Exception:
+                            return data
+    return None
+
+
 def generate_video(
     prompt: str,
     image_bytes: bytes | None = None,
     image_mime_type: str = "image/png",
     previous_interaction_id: str | None = None,
+    duration: str | None = None,
 ) -> tuple[bytes, str]:
     """Omni Flash → (video bytes, interaction_id).
 
@@ -56,35 +72,50 @@ def generate_video(
       clip animates from that keyframe (image+text → video).
     - `previous_interaction_id`: chains this clip onto a prior one for
       continuity (the interaction-id chain used to build long video).
+    - `duration`: clip length (e.g. "10s"); defaults to settings.
 
-    Input format follows the Interactions API: a plain string for text-only,
-    or a list of typed content blocks when an image is included.
+    Follows the working call shape: an explicit generation_config,
+    response_modalities=['video'], and a response_format carrying the
+    duration. Crucially, when an image is supplied we set
+    video_config.task='image_to_video' so the model conditions on the
+    keyframe (otherwise it largely ignores it → inconsistent output).
     """
     if image_bytes:
+        task = "image_to_video"
         interaction_input: object = [
             {"type": "text", "text": prompt},
             {
                 "type": "image",
                 "data": base64.b64encode(image_bytes).decode(),
                 "mime_type": image_mime_type,
+                "resolution": settings.VIDEO_IMAGE_RESOLUTION,
             },
         ]
     else:
+        task = "text_to_video"
         interaction_input = prompt
 
-    kwargs: dict = {"model": settings.VIDEO_MODEL, "input": interaction_input}
+    kwargs: dict = {
+        "model": settings.VIDEO_MODEL,
+        "input": interaction_input,
+        "generation_config": {
+            "max_output_tokens": settings.VIDEO_MAX_OUTPUT_TOKENS,
+            "thinking_level": settings.VIDEO_THINKING_LEVEL,
+            "video_config": {"task": task},
+        },
+        "response_modalities": ["video"],
+        "response_format": {
+            "type": "video",
+            "duration": duration or settings.VIDEO_DURATION,
+        },
+    }
     if previous_interaction_id:
         kwargs["previous_interaction_id"] = previous_interaction_id
 
     interaction = _client().interactions.create(**kwargs)
 
-    output = interaction.output_video
-    if not (output and output.data):
+    video_bytes = _extract_video_bytes(interaction)
+    if video_bytes is None:
         raise RuntimeError("Video model returned no video data")
-
-    try:
-        video_bytes = base64.b64decode(output.data)
-    except Exception:
-        video_bytes = output.data
 
     return video_bytes, interaction.id

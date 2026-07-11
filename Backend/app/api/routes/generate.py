@@ -31,6 +31,8 @@ class VideoRequest(BaseModel):
     prompt: str
     # A previously generated keyframe (from /generate/image) to animate from.
     image_url: str | None = None
+    # Clip length, e.g. "10s". Defaults to settings when omitted.
+    duration: str | None = None
     # Chain this clip onto a previous one (continuity). Optional for the MVP.
     previous_interaction_id: str | None = None
 
@@ -62,6 +64,7 @@ def create_video(req: VideoRequest) -> VideoResponse:
             req.prompt,
             image_bytes=image_bytes,
             image_mime_type=image_mime,
+            duration=req.duration,
             previous_interaction_id=req.previous_interaction_id,
         )
     except Exception as exc:

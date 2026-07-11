@@ -60,7 +60,7 @@ def test_video(
     print(f"    keyframe: {image_url or '(none — text only)'}")
     resp = client.post(
         base_url + "/api/generate/video",
-        json={"prompt": prompt, "image_url": image_url},
+        json={"prompt": prompt, "image_url": image_url, "duration": "10s"},
     )
     if resp.status_code != 200:
         print(f"    FAILED [{resp.status_code}]: {resp.text}")
